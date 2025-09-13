@@ -168,15 +168,15 @@ public class PenguinAuctionHouse extends JavaPlugin implements Listener, Command
         if (clicked == null || clicked.getType() == Material.AIR) return;
         ItemMeta meta = clicked.getItemMeta();
         if (meta == null || !meta.hasDisplayName()) return;
-        String name = meta.displayName().content();
+        Component name = meta.displayName();
 
-        if (name.equals("§aNext Page")) {
+        if (name.equals(Component.text("§aNext Page"))) {
             int current = currentPages.getOrDefault(p.getUniqueId(), 0);
             openGUI(p, current + 1);
-        } else if (name.equals("§aPrevious Page")) {
+        } else if (name.equals(Component.text("§aPrevious Page"))) {
             int current = currentPages.getOrDefault(p.getUniqueId(), 0);
             if (current > 0) openGUI(p, current - 1);
-        } else if (name.equals("§eReset / Retrieve Items")) {
+        } else if (name.equals(Component.text("§eReset / Retrieve Items"))) {
             List<AuctionItem> myList = playerListings.getOrDefault(p.getUniqueId(), new ArrayList<>());
             for (AuctionItem ai : new ArrayList<>(myList)) {
                 if (!ai.sold) {
