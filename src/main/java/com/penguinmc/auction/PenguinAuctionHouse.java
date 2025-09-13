@@ -1,5 +1,6 @@
-package com.penguinah.penguinah;
+package com.penguinmc.auction;
 
+import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.command.Command;
@@ -16,12 +17,14 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.util.*;
 
-public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
+public class PenguinAuctionHouse extends JavaPlugin implements Listener, CommandExecutor {
 
-    private static PenguinAH instance;
+    private static PenguinAuctionHouse instance;
+
     private final Map<UUID, List<AuctionItem>> playerListings = new HashMap<>();
     private final List<AuctionItem> activeListings = new ArrayList<>();
     private final Map<UUID, Integer> currentPages = new HashMap<>();
+
     private int defaultSlots;
     private long expireMillis;
 
@@ -57,14 +60,14 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
                     if (list != null) list.remove(ai);
                 }
             }
-        }, 20*60, 20*60); // kiểm tra mỗi phút
+        }, 20*60, 20*60);
 
-        getLogger().info("PenguinAH enabled!");
+        getLogger().info("PenguinAuctionHouse enabled!");
     }
 
     @Override
     public void onDisable() {
-        getLogger().info("PenguinAH disabled!");
+        getLogger().info("PenguinAuctionHouse disabled!");
     }
 
     @Override
@@ -73,7 +76,7 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
 
         if (args.length > 0 && args[0].equalsIgnoreCase("sell")) {
             if (args.length < 3) {
-                p.sendMessage("§cUsage: /ah sell <amount> <currency>");
+                p.sendMessage(Component.text("§cUsage: /ah sell <amount> <currency>"));
                 return true;
             }
 
@@ -81,20 +84,21 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
             try {
                 currency = Material.valueOf(args[2].toUpperCase());
             } catch (Exception e) {
-                p.sendMessage("§cCurrency invalid! Must be: DIAMOND, IRON_INGOT, NETHERITE_INGOT, EMERALD, GOLD_INGOT");
+                p.sendMessage(Component.text("§cCurrency invalid! Must be: DIAMOND, IRON_INGOT, NETHERITE_INGOT, EMERALD, GOLD_INGOT"));
                 return true;
             }
+
             if (!validCurrencies.contains(currency)) {
-                p.sendMessage("§cCurrency not supported!");
+                p.sendMessage(Component.text("§cCurrency not supported!"));
                 return true;
             }
 
             int amount;
-            try { amount = Integer.parseInt(args[1]); } catch (Exception e) { p.sendMessage("§cAmount invalid!"); return true; }
+            try { amount = Integer.parseInt(args[1]); } catch (Exception e) { p.sendMessage(Component.text("§cAmount invalid!")); return true; }
 
             ItemStack hand = p.getInventory().getItemInMainHand();
             if (hand == null || hand.getType() == Material.AIR) {
-                p.sendMessage("§cYou must hold an item to sell!");
+                p.sendMessage(Component.text("§cYou must hold an item to sell!"));
                 return true;
             }
 
@@ -105,7 +109,7 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
 
             List<AuctionItem> listings = playerListings.getOrDefault(p.getUniqueId(), new ArrayList<>());
             if (listings.size() >= maxSlots) {
-                p.sendMessage("§cYou reached your auction slot limit!");
+                p.sendMessage(Component.text("§cYou reached your auction slot limit!"));
                 return true;
             }
 
@@ -118,7 +122,7 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
             playerListings.put(p.getUniqueId(), listings);
             activeListings.add(ai);
 
-            p.sendMessage("§aItem listed successfully!");
+            p.sendMessage(Component.text("§aItem listed successfully!"));
             return true;
         }
 
@@ -129,7 +133,7 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
 
     private void openGUI(Player p, int page) {
         int size = 54;
-        Inventory gui = Bukkit.createInventory(null, size, "§6PenguinAH");
+        Inventory gui = Bukkit.createInventory(null, size, Component.text("§6PenguinAH"));
         currentPages.put(p.getUniqueId(), page);
 
         int start = page * 45;
@@ -139,18 +143,17 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
             gui.setItem(i - start, activeListings.get(i).item.clone());
         }
 
-        // Bottom buttons
-        gui.setItem(45, createButton(Material.ARROW, "§aPrevious Page"));
-        gui.setItem(53, createButton(Material.ARROW, "§aNext Page"));
-        gui.setItem(49, createButton(Material.CHEST, "§eReset / Retrieve Items"));
+        gui.setItem(45, createButton(Material.ARROW, Component.text("§aPrevious Page")));
+        gui.setItem(53, createButton(Material.ARROW, Component.text("§aNext Page")));
+        gui.setItem(49, createButton(Material.CHEST, Component.text("§eReset / Retrieve Items")));
 
         p.openInventory(gui);
     }
 
-    private ItemStack createButton(Material mat, String name) {
+    private ItemStack createButton(Material mat, Component name) {
         ItemStack b = new ItemStack(mat);
         ItemMeta m = b.getItemMeta();
-        m.setDisplayName(name);
+        m.displayName(name);
         b.setItemMeta(m);
         return b;
     }
@@ -158,15 +161,14 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
     @EventHandler
     public void onInventoryClick(InventoryClickEvent e) {
         if (!(e.getWhoClicked() instanceof Player p)) return;
-        String title = e.getView().title();
-        if (!title.equals("§6PenguinAH")) return;
+        if (!e.getView().title().equals(Component.text("§6PenguinAH"))) return;
         e.setCancelled(true);
 
         ItemStack clicked = e.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
         ItemMeta meta = clicked.getItemMeta();
-        if (meta == null) return;
-        String name = meta.getDisplayName();
+        if (meta == null || !meta.hasDisplayName()) return;
+        String name = meta.displayName().content();
 
         if (name.equals("§aNext Page")) {
             int current = currentPages.getOrDefault(p.getUniqueId(), 0);
@@ -183,7 +185,7 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
                     myList.remove(ai);
                 }
             }
-            p.sendMessage("§aYour unsold items have been returned!");
+            p.sendMessage(Component.text("§aYour unsold items have been returned!"));
             openGUI(p, 0);
         } else {
             // Buying logic
@@ -196,11 +198,10 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
             }
             if (target == null) return;
             if (target.seller.equals(p.getUniqueId())) {
-                p.sendMessage("§cYou cannot buy your own item!");
+                p.sendMessage(Component.text("§cYou cannot buy your own item!"));
                 return;
             }
 
-            // Check currency
             int costAmount = target.item.getAmount();
             boolean hasEnough = false;
             for (ItemStack invItem : p.getInventory().getContents()) {
@@ -210,21 +211,22 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
                     break;
                 }
             }
+
             if (!hasEnough) {
-                p.sendMessage("§cYou don't have enough " + target.currency.name() + " to buy this item!");
+                p.sendMessage(Component.text("§cYou don't have enough " + target.currency.name() + " to buy this item!"));
                 return;
             }
 
-            // Give item
             p.getInventory().addItem(target.item.clone());
             Player seller = Bukkit.getPlayer(target.seller);
             if (seller != null) seller.getInventory().addItem(new ItemStack(target.currency, costAmount));
+
             target.sold = true;
             activeListings.remove(target);
             playerListings.get(target.seller).remove(target);
 
-            p.sendMessage("§aPurchase successful!");
-            if (seller != null) seller.sendMessage("§aYour item has been sold!");
+            p.sendMessage(Component.text("§aPurchase successful!"));
+            if (seller != null) seller.sendMessage(Component.text("§aYour item has been sold!"));
             openGUI(p, currentPages.getOrDefault(p.getUniqueId(), 0));
         }
     }
@@ -247,5 +249,5 @@ public class PenguinAH extends JavaPlugin implements Listener, CommandExecutor {
         }
     }
 
-    public static PenguinAH getInstance() { return instance; }
+    public static PenguinAuctionHouse getInstance() { return instance; }
 }
