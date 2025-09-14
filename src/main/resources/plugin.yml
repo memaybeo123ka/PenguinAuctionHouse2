@@ -5,5 +5,5 @@ api-version: 1.21
 author: PenguinMC
 commands:
   ah:
-    description: Open the auction house GUI and use subcommands
-    usage: /ah <subcommand>
+    description: Auction house command
+    usage: /ah [sell]
