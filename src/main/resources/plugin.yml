@@ -1,7 +1,7 @@
 name: PenguinAuctionHouse
 main: com.penguinmc.auction.PenguinAuctionHouse
 version: 1.0.0
-api-version: 1.21
+api-version: 1.20
 author: PenguinMC
 commands:
   ah:
